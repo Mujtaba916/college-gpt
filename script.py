@@ -92,7 +92,7 @@ st.sidebar.markdown("---")
 st.sidebar.button("➕ New Chat", on_click=create_new_session)
 
 # Load FAISS Index
-DOC_PATH = "https://raw.githubusercontent.com/5298479/college-GPT/main/data/sample.docx"
+DOC_PATH = "https://github.com/Mujtaba916/college-gpt/blob/main/data/sample.docx"
 doc_text = load_word_document(DOC_PATH)
 
 embeddings = CohereEmbeddings(model="embed-english-v3.0", cohere_api_key=COHERE_API_KEY, user_agent=USER_AGENT)
