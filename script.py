@@ -146,7 +146,7 @@ st.markdown("""
 # Title and Logo
 col1, col2 = st.columns([0.1, 0.9])
 with col1:
-    st.image("https://raw.githubusercontent.com/5298479/college-GPT/main/logo.jpg", width=80)
+    st.image("https://github.com/Mujtaba916/college-gpt/blob/main/logo.jpg", width=80)
 with col2:
     st.title("CollegeGPT")
 
