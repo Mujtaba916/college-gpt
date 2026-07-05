@@ -1,0 +1,8 @@
+streamlit
+langchain
+cohere
+faiss-cpu
+docx
+langchain-community
+python-docx
+supabase
