@@ -2,7 +2,7 @@ import streamlit as st
 from langchain_community.llms import Cohere
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import CohereEmbeddings
-from langchain.chains import RetrievalQA
+from langchain.chains.retrieval_qa.base import RetrievalQA  # ✅ Alternative import
 import os
 from docx import Document
 import requests
