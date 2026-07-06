@@ -1,14 +1,12 @@
 import streamlit as st
-from langchain_community.llms import Cohere
+# ✅ CORRECT IMPORTS FOR MODERN COHERE
+from langchain_cohere import ChatCohere, CohereEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import CohereEmbeddings
-# ✅ FIXED: Using the correct modern imports
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.documents import Document
 import os
-from docx import Document as DocxDocument  # Renamed to avoid conflict
+from docx import Document as DocxDocument
 import requests
 import base64
 import json
@@ -34,7 +32,7 @@ def load_word_document(doc_path):
         doc = DocxDocument("temp.docx")
         full_text = []
         for para in doc.paragraphs:
-            if para.text.strip():  # Only add non-empty paragraphs
+            if para.text.strip():
                 full_text.append(para.text)
         return '\n'.join(full_text)
     except Exception as e:
@@ -115,11 +113,10 @@ def initialize_qa_system():
             st.error("Failed to load document. Please check the file path.")
             return None
         
-        # Initialize embeddings
+        # ✅ MODERN COHERE EMBEDDINGS
         embeddings = CohereEmbeddings(
-            model="embed-english-v3.0", 
-            cohere_api_key=COHERE_API_KEY, 
-            user_agent=USER_AGENT
+            model="embed-english-v3.0",
+            cohere_api_key=COHERE_API_KEY
         )
         
         store_filename = "word_doc_faiss.index"
@@ -139,15 +136,14 @@ def initialize_qa_system():
         
         retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
         
-        # Initialize LLM
-        llm = Cohere(
-            model="command", 
-            temperature=0.7, 
-            cohere_api_key=COHERE_API_KEY, 
-            user_agent=USER_AGENT
+        # ✅ MODERN COHERE CHAT API - CORRECT WAY
+        llm = ChatCohere(
+            model="command-r",  # Use command-r or command-r-plus
+            temperature=0.7,
+            cohere_api_key=COHERE_API_KEY
         )
         
-        # ✅ MODERN APPROACH: Create QA chain without RetrievalQA
+        # Create the prompt template
         def format_docs(docs):
             return "\n\n".join(doc.page_content for doc in docs)
         
@@ -201,7 +197,7 @@ def send_query():
             current_session = new_title
     
     try:
-        # ✅ MODERN WAY: Use invoke instead of run
+        # Get response from the chain
         answer = qa_chain.invoke(user_input)
         
         # Save to Supabase
@@ -214,6 +210,8 @@ def send_query():
         
     except Exception as e:
         st.error(f"Error getting response: {e}")
+        import traceback
+        st.error(traceback.format_exc())
 
 # Chat Styling
 st.markdown("""
@@ -237,7 +235,7 @@ with col1:
     try:
         st.image("https://raw.githubusercontent.com/Mujtaba916/college-gpt/main/logo.jpg", width=80)
     except:
-        st.image("https://via.placeholder.com/80", width=80)  # Fallback
+        st.image("https://via.placeholder.com/80", width=80)
 with col2:
     st.title("CollegeGPT")
 
