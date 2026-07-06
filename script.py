@@ -73,18 +73,17 @@ def delete_session(session_name):
         if not remaining:
             st.session_state.chat_sessions["Default"] = []
 
-# Custom CSS to pin footer at bottom
+# ✅ FIXED: Custom CSS to pin footer at bottom permanently
 st.markdown("""
     <style>
-        /* Make sidebar take full height and use flex layout */
+        /* Make sidebar use flex layout */
         section[data-testid="stSidebar"] > div {
             display: flex;
             flex-direction: column;
             height: 100vh;
-            justify-content: space-between;
         }
         
-        /* The main content area should take remaining space */
+        /* Content area takes remaining space */
         section[data-testid="stSidebar"] > div > div:first-child {
             flex: 1;
             overflow-y: auto;
@@ -96,10 +95,11 @@ st.markdown("""
             bottom: 0;
             background-color: white;
             padding: 15px 0;
-            border-top: 1px solid #e0e0e0;
+            border-top: 2px solid #e0e0e0;
             margin-top: auto;
             width: 100%;
             text-align: center;
+            flex-shrink: 0;
         }
         
         .sidebar-footer p {
@@ -107,12 +107,6 @@ st.markdown("""
             font-weight: bold !important;
             font-size: 0.85rem !important;
             margin: 0 !important;
-        }
-        
-        /* Ensure footer stays at bottom even when content grows */
-        section[data-testid="stSidebar"] > div > div:last-child {
-            margin-top: auto;
-            width: 100%;
         }
     </style>
 """, unsafe_allow_html=True)
