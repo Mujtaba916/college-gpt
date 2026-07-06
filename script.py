@@ -73,8 +73,54 @@ def delete_session(session_name):
         if not remaining:
             st.session_state.chat_sessions["Default"] = []
 
-# ✅ SIDEBAR - Chat History and Footer
+# Custom CSS to pin footer at bottom
+st.markdown("""
+    <style>
+        /* Make sidebar take full height and use flex layout */
+        section[data-testid="stSidebar"] > div {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            justify-content: space-between;
+        }
+        
+        /* The main content area should take remaining space */
+        section[data-testid="stSidebar"] > div > div:first-child {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        /* Footer container - fixed at bottom */
+        .sidebar-footer {
+            position: sticky;
+            bottom: 0;
+            background-color: white;
+            padding: 15px 0;
+            border-top: 1px solid #e0e0e0;
+            margin-top: auto;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .sidebar-footer p {
+            color: black !important;
+            font-weight: bold !important;
+            font-size: 0.85rem !important;
+            margin: 0 !important;
+        }
+        
+        /* Ensure footer stays at bottom even when content grows */
+        section[data-testid="stSidebar"] > div > div:last-child {
+            margin-top: auto;
+            width: 100%;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# SIDEBAR - Chat History
 st.sidebar.markdown("### Chat History")
+
+# Chat history buttons
 for session in list(st.session_state.chat_sessions.keys()):
     active = " (Active)" if session == st.session_state.active_session else ""
     with st.sidebar.container():
@@ -98,18 +144,12 @@ def create_new_session():
 st.sidebar.markdown("---")
 st.sidebar.button("➕ New Chat", on_click=create_new_session)
 
-# ✅ FOOTER AT BOTTOM OF SIDEBAR - Using empty space to push to bottom
-st.sidebar.markdown("<br>" * 10, unsafe_allow_html=True)  # Add spacing
-st.sidebar.markdown("---")
-st.sidebar.markdown(
-    """
-    <div style="text-align: center; color: black; font-weight: bold; font-size: 0.85rem; padding: 10px 0;">
-        💡 Powered by Cohere AI and LangChain
+# ✅ FIXED: Footer pinned at bottom using CSS
+st.sidebar.markdown("""
+    <div class="sidebar-footer">
+        <p>💡 Powered by Cohere AI and LangChain</p>
     </div>
-    """,
-    unsafe_allow_html=True
-)
-
+""", unsafe_allow_html=True)
 
 # Initialize LLM and QA System
 @st.cache_resource
