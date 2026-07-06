@@ -98,12 +98,13 @@ def create_new_session():
 st.sidebar.markdown("---")
 st.sidebar.button("➕ New Chat", on_click=create_new_session)
 
-# ✅ ADD THIS: Footer at the very bottom of sidebar (one line, black text)
-st.sidebar.markdown("""
-    <div style="position: fixed; bottom: 0; width: 100%; text-align: center; padding: 10px 0; background-color: transparent;">
-        <span style="color: black; font-size: 0.8rem;">⚡ Powered by Cohere AI & LangChain</span>
-    </div>
-""", unsafe_allow_html=True)
+# ✅ FIXED: Footer at the bottom of sidebar (one line, black text)
+st.sidebar.markdown("---")
+st.sidebar.markdown(
+    '<p style="color: black; font-size: 0.8rem; text-align: center; margin-top: 20px;">⚡ Powered by Cohere AI & LangChain</p>',
+    unsafe_allow_html=True
+)
+
 # Initialize LLM and QA System
 @st.cache_resource
 def initialize_qa_system():
@@ -140,7 +141,7 @@ def initialize_qa_system():
         
         # ✅ CORRECT MODEL - Use this exact name
         llm = ChatCohere(
-            model="command-r-08-2024",  # ✅ THIS WORKS
+            model="command-r-08-2024",
             temperature=0.7,
             cohere_api_key=COHERE_API_KEY
         )
@@ -248,7 +249,3 @@ for chat in st.session_state.chat_sessions.get(current_session, []):
 
 # Input Field
 st.text_input("Ask another question:", key="user_input", on_change=send_query, placeholder="Type your question here...")
-
-# ❌ REMOVE THIS - No longer needed at bottom
-# st.markdown("---")
-# st.markdown("💡 *Powered by Cohere AI and LangChain*")
