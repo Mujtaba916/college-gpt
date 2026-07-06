@@ -101,10 +101,9 @@ st.sidebar.button("➕ New Chat", on_click=create_new_session)
 # ✅ ADD THIS: Footer at the very bottom of sidebar (one line, black text)
 st.sidebar.markdown("""
     <div style="position: fixed; bottom: 0; width: 100%; text-align: center; padding: 10px 0; background-color: transparent;">
-        <span style="color: black; font-size: 0.8rem;">Powered by Cohere AI & LangChain</span>
+        <span style="color: black; font-size: 0.8rem;">⚡ Powered by Cohere AI & LangChain</span>
     </div>
 """, unsafe_allow_html=True)
-
 # Initialize LLM and QA System
 @st.cache_resource
 def initialize_qa_system():
