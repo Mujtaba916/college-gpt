@@ -11,6 +11,12 @@ import json
 from supabase import create_client, Client
 from datetime import datetime
 
+st.set_page_config(
+    page_title="CollegeGPT", 
+    layout="wide",
+    page_icon="https://raw.githubusercontent.com/Mujtaba916/college-gpt/main/logo.jpg"
+)
+
 # Page Configuration
 st.set_page_config(page_title="CollegeGPT", layout="wide")
 COHERE_API_KEY = os.environ.get("COHERE_API_KEY")
