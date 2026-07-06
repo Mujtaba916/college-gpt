@@ -73,7 +73,7 @@ def delete_session(session_name):
         if not remaining:
             st.session_state.chat_sessions["Default"] = []
 
-# Sidebar Chat History
+# ✅ SIDEBAR - Chat History and Footer
 st.sidebar.markdown("### Chat History")
 for session in list(st.session_state.chat_sessions.keys()):
     active = " (Active)" if session == st.session_state.active_session else ""
@@ -97,6 +97,15 @@ def create_new_session():
 
 st.sidebar.markdown("---")
 st.sidebar.button("➕ New Chat", on_click=create_new_session)
+
+# ✅ ADD THIS: Footer at the bottom of sidebar
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+    <div style="text-align: center; padding: 10px 0; color: #666; font-size: 0.8rem;">
+        💡 Powered by<br>
+        <strong>Cohere AI</strong> &amp; <strong>LangChain</strong>
+    </div>
+""", unsafe_allow_html=True)
 
 # Initialize LLM and QA System
 @st.cache_resource
@@ -243,6 +252,6 @@ for chat in st.session_state.chat_sessions.get(current_session, []):
 # Input Field
 st.text_input("Ask another question:", key="user_input", on_change=send_query, placeholder="Type your question here...")
 
-# Add a footer
-st.markdown("---")
-st.markdown("💡 *Powered by Cohere AI and LangChain*")
+# ❌ REMOVE THIS - No longer needed at bottom
+# st.markdown("---")
+# st.markdown("💡 *Powered by Cohere AI and LangChain*")
