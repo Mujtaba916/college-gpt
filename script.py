@@ -138,7 +138,7 @@ def initialize_qa_system():
         
         # ✅ MODERN COHERE CHAT API - CORRECT WAY
         llm = ChatCohere(
-            model="command-r",  # Use command-r or command-r-plus
+            model="command-a",  # Use command-r or command-r-plus
             temperature=0.7,
             cohere_api_key=COHERE_API_KEY
         )
