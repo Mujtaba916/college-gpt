@@ -2,9 +2,13 @@ import streamlit as st
 from langchain_community.llms import Cohere
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import CohereEmbeddings
-from langchain.chains.retrieval_qa.base import RetrievalQA
+# ✅ FIXED: Using the correct modern imports
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.documents import Document
 import os
-from docx import Document
+from docx import Document as DocxDocument  # Renamed to avoid conflict
 import requests
 import base64
 import json
@@ -16,18 +20,22 @@ st.set_page_config(page_title="CollegeGPT", layout="wide")
 COHERE_API_KEY = os.environ.get("COHERE_API_KEY")
 USER_AGENT = os.environ.get("USER_AGENT", "mujtaba/1.0")
 
-
 # Load Word Document
 def load_word_document(doc_path):
     try:
+        # Fix: Use raw URL for GitHub
+        if "github.com" in doc_path:
+            doc_path = doc_path.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+        
         response = requests.get(doc_path)
         response.raise_for_status()
         with open("temp.docx", "wb") as f:
             f.write(response.content)
-        doc = Document("temp.docx")
+        doc = DocxDocument("temp.docx")
         full_text = []
         for para in doc.paragraphs:
-            full_text.append(para.text)
+            if para.text.strip():  # Only add non-empty paragraphs
+                full_text.append(para.text)
         return '\n'.join(full_text)
     except Exception as e:
         st.error(f"Failed to load document from URL: {e}")
@@ -36,21 +44,25 @@ def load_word_document(doc_path):
 # Supabase credentials
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+if not SUPABASE_URL or not SUPABASE_KEY:
+    st.warning("Supabase credentials not found. Chat history will not be saved.")
+    supabase = None
+else:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-
-def save_chat(user_message, boot_response):
-    from datetime import datetime
-    data = {
-        "user_message": user_message,
-        "boot_response": boot_response,
-        "timestamp": datetime.utcnow().isoformat()
-    }
-
-    response = supabase.table("gpt").insert(data).execute()
-
-
+def save_chat(user_message, bot_response):
+    if supabase is None:
+        return
+    try:
+        data = {
+            "user_message": user_message,
+            "boot_response": bot_response,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        response = supabase.table("gpt").insert(data).execute()
+    except Exception as e:
+        st.error(f"Failed to save chat: {e}")
 
 # Initialize Session
 if "chat_sessions" not in st.session_state:
@@ -91,46 +103,117 @@ def create_new_session():
 st.sidebar.markdown("---")
 st.sidebar.button("➕ New Chat", on_click=create_new_session)
 
-# Load FAISS Index
-DOC_PATH = "https://github.com/Mujtaba916/college-gpt/blob/main/data/sample.docx"
-doc_text = load_word_document(DOC_PATH)
+# Initialize LLM and QA System
+@st.cache_resource
+def initialize_qa_system():
+    try:
+        # Load document
+        DOC_PATH = "https://raw.githubusercontent.com/Mujtaba916/college-gpt/main/data/sample.docx"
+        doc_text = load_word_document(DOC_PATH)
+        
+        if not doc_text:
+            st.error("Failed to load document. Please check the file path.")
+            return None
+        
+        # Initialize embeddings
+        embeddings = CohereEmbeddings(
+            model="embed-english-v3.0", 
+            cohere_api_key=COHERE_API_KEY, 
+            user_agent=USER_AGENT
+        )
+        
+        store_filename = "word_doc_faiss.index"
+        
+        # Load or create vectorstore
+        if os.path.exists(store_filename):
+            vectorstore = FAISS.load_local(
+                store_filename, 
+                embeddings, 
+                allow_dangerous_deserialization=True
+            )
+        else:
+            # Split text into chunks for better retrieval
+            chunks = [doc_text[i:i+1000] for i in range(0, len(doc_text), 1000)]
+            vectorstore = FAISS.from_texts(chunks, embedding=embeddings)
+            vectorstore.save_local(store_filename)
+        
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+        
+        # Initialize LLM
+        llm = Cohere(
+            model="command", 
+            temperature=0.7, 
+            cohere_api_key=COHERE_API_KEY, 
+            user_agent=USER_AGENT
+        )
+        
+        # ✅ MODERN APPROACH: Create QA chain without RetrievalQA
+        def format_docs(docs):
+            return "\n\n".join(doc.page_content for doc in docs)
+        
+        prompt = ChatPromptTemplate.from_template("""
+        You are a helpful assistant for college students. Answer the question based on the following context:
 
-embeddings = CohereEmbeddings(model="embed-english-v3.0", cohere_api_key=COHERE_API_KEY, user_agent=USER_AGENT)
-store_filename = "word_doc_faiss.index"
+        Context: {context}
 
-if os.path.exists(store_filename):
-    vectorstore = FAISS.load_local(store_filename, embeddings, allow_dangerous_deserialization=True)
-else:
-    vectorstore = FAISS.from_texts([doc_text], embedding=embeddings)
-    vectorstore.save_local(store_filename)
+        Question: {question}
 
-retriever = vectorstore.as_retriever()
-llm = Cohere(model="command", temperature=0.7, cohere_api_key=COHERE_API_KEY, user_agent=USER_AGENT)
-qa_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
+        Answer (be concise, accurate, and helpful):""")
+        
+        # Create the chain
+        qa_chain = (
+            {
+                "context": retriever | format_docs,
+                "question": RunnablePassthrough()
+            }
+            | prompt
+            | llm
+            | StrOutputParser()
+        )
+        
+        return qa_chain
+        
+    except Exception as e:
+        st.error(f"Failed to initialize QA system: {e}")
+        return None
+
+# Load QA system
+qa_chain = initialize_qa_system()
 
 # Send Query
 def send_query():
     user_input = st.session_state.get("user_input", "").strip()
     current_session = st.session_state.active_session
-
-    if user_input and qa_chain:
-        # Auto-rename on first message
-        if (current_session.startswith("Chat") or current_session.startswith("Imported")) and len(st.session_state.chat_sessions[current_session]) == 0:
-            new_title = user_input[:30] + ("..." if len(user_input) > 30 else "")
-            if new_title not in st.session_state.chat_sessions:
-                st.session_state.chat_sessions[new_title] = st.session_state.chat_sessions.pop(current_session)
-                st.session_state.active_session = new_title
-                current_session = new_title  # Update reference to avoid KeyError
-
-        answer = qa_chain.run(user_input)
+    
+    if not user_input:
+        return
         
-        # Save to Firestore after getting the response
+    if qa_chain is None:
+        st.error("QA system is not initialized. Please check your setup.")
+        return
+    
+    # Auto-rename on first message
+    if (current_session.startswith("Chat") or current_session.startswith("Imported")) and len(st.session_state.chat_sessions[current_session]) == 0:
+        new_title = user_input[:30] + ("..." if len(user_input) > 30 else "")
+        if new_title not in st.session_state.chat_sessions:
+            st.session_state.chat_sessions[new_title] = st.session_state.chat_sessions.pop(current_session)
+            st.session_state.active_session = new_title
+            current_session = new_title
+    
+    try:
+        # ✅ MODERN WAY: Use invoke instead of run
+        answer = qa_chain.invoke(user_input)
+        
+        # Save to Supabase
         save_chat(user_input, answer)
         
         # Append conversation to session
         st.session_state.chat_sessions[current_session].append({"role": "user", "content": user_input})
         st.session_state.chat_sessions[current_session].append({"role": "assistant", "content": answer})
         st.session_state.user_input = ""
+        
+    except Exception as e:
+        st.error(f"Error getting response: {e}")
 
 # Chat Styling
 st.markdown("""
@@ -140,13 +223,21 @@ st.markdown("""
         .chat-box { background-color: #1e1e1e; padding: 15px; border-radius: 10px; margin: 10px 0; }
         .user { text-align: right; color: cyan; }
         .assistant { text-align: left; color: white; }
+        .stTextInput > div > div > input {
+            background-color: #1e1e1e;
+            color: white;
+            border: 1px solid #333;
+        }
     </style>
 """, unsafe_allow_html=True)
 
 # Title and Logo
 col1, col2 = st.columns([0.1, 0.9])
 with col1:
-    st.image("https://github.com/Mujtaba916/college-gpt/blob/main/logo.jpg", width=80)
+    try:
+        st.image("https://raw.githubusercontent.com/Mujtaba916/college-gpt/main/logo.jpg", width=80)
+    except:
+        st.image("https://via.placeholder.com/80", width=80)  # Fallback
 with col2:
     st.title("CollegeGPT")
 
@@ -157,4 +248,8 @@ for chat in st.session_state.chat_sessions.get(current_session, []):
     st.markdown(f"<div class='chat-box {role_class}'><b>{chat['role'].capitalize()}:</b> {chat['content']}</div>", unsafe_allow_html=True)
 
 # Input Field
-st.text_input("Ask another question:", key="user_input", on_change=send_query)
+st.text_input("Ask another question:", key="user_input", on_change=send_query, placeholder="Type your question here...")
+
+# Add a footer
+st.markdown("---")
+st.markdown("💡 *Powered by Cohere AI and LangChain*")
