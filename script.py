@@ -98,12 +98,10 @@ def create_new_session():
 st.sidebar.markdown("---")
 st.sidebar.button("➕ New Chat", on_click=create_new_session)
 
-# ✅ ADD THIS: Footer at the bottom of sidebar
-st.sidebar.markdown("---")
+# ✅ ADD THIS: Footer at the very bottom of sidebar (one line, black text)
 st.sidebar.markdown("""
-    <div style="text-align: center; padding: 10px 0; color: #666; font-size: 0.8rem;">
-        💡 Powered by<br>
-        <strong>Cohere AI</strong> &amp; <strong>LangChain</strong>
+    <div style="position: fixed; bottom: 0; width: 100%; text-align: center; padding: 10px 0; background-color: transparent;">
+        <span style="color: black; font-size: 0.8rem;">Powered by Cohere AI & LangChain</span>
     </div>
 """, unsafe_allow_html=True)
 
