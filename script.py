@@ -1,5 +1,4 @@
 import streamlit as st
-# ✅ CORRECT IMPORTS FOR MODERN COHERE
 from langchain_cohere import ChatCohere, CohereEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
@@ -8,7 +7,6 @@ from langchain_core.output_parsers import StrOutputParser
 import os
 from docx import Document as DocxDocument
 import requests
-import base64
 import json
 from supabase import create_client, Client
 from datetime import datetime
@@ -21,7 +19,6 @@ USER_AGENT = os.environ.get("USER_AGENT", "mujtaba/1.0")
 # Load Word Document
 def load_word_document(doc_path):
     try:
-        # Fix: Use raw URL for GitHub
         if "github.com" in doc_path:
             doc_path = doc_path.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
         
@@ -113,7 +110,7 @@ def initialize_qa_system():
             st.error("Failed to load document. Please check the file path.")
             return None
         
-        # ✅ MODERN COHERE EMBEDDINGS
+        # Initialize embeddings
         embeddings = CohereEmbeddings(
             model="embed-english-v3.0",
             cohere_api_key=COHERE_API_KEY
@@ -129,16 +126,15 @@ def initialize_qa_system():
                 allow_dangerous_deserialization=True
             )
         else:
-            # Split text into chunks for better retrieval
             chunks = [doc_text[i:i+1000] for i in range(0, len(doc_text), 1000)]
             vectorstore = FAISS.from_texts(chunks, embedding=embeddings)
             vectorstore.save_local(store_filename)
         
         retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
         
-        # ✅ MODERN COHERE CHAT API - CORRECT WAY
+        # ✅ CORRECT MODEL - Use this exact name
         llm = ChatCohere(
-            model="command-a",  # Use command-r or command-r-plus
+            model="command-r-08-2024",  # ✅ THIS WORKS
             temperature=0.7,
             cohere_api_key=COHERE_API_KEY
         )
@@ -197,7 +193,6 @@ def send_query():
             current_session = new_title
     
     try:
-        # Get response from the chain
         answer = qa_chain.invoke(user_input)
         
         # Save to Supabase
