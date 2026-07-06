@@ -98,12 +98,18 @@ def create_new_session():
 st.sidebar.markdown("---")
 st.sidebar.button("➕ New Chat", on_click=create_new_session)
 
-# ✅ FIXED: Footer at the bottom of sidebar (one line, black text)
+# ✅ FOOTER AT BOTTOM OF SIDEBAR - Using empty space to push to bottom
+st.sidebar.markdown("<br>" * 10, unsafe_allow_html=True)  # Add spacing
 st.sidebar.markdown("---")
 st.sidebar.markdown(
-    '<p style="color: black; font-size: 0.8rem; text-align: center; margin-top: 20px;">⚡ Powered by Cohere AI & LangChain</p>',
+    """
+    <div style="text-align: center; color: black; font-weight: bold; font-size: 0.85rem; padding: 10px 0;">
+        💡 Powered by Cohere AI and LangChain
+    </div>
+    """,
     unsafe_allow_html=True
 )
+
 
 # Initialize LLM and QA System
 @st.cache_resource
